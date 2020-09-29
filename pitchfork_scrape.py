@@ -232,7 +232,25 @@ def parse_body_tag(tag):
     
 #%% main loop
 
-def scrape_pitchfork():
+def scrape_pitchfork(start=1, end=243, write_path=None):
+    """main script to scrape pitchfork best tracks
+    
+
+    Parameters
+    ----------
+    start : int, optional
+        Page to start scraping at. The default is 1.
+    end : TYPE, optional
+        page to stop scraping at. The default is 243, which was max as of 9/25/20.
+    write_path : TYPE, optional
+        if provided, location to write csv of output to. The default is None.
+
+    Returns
+    -------
+    my_df : TYPE
+        Pandas DataFrame of the scrape results.
+
+    """
     t0=time.time()
     t2=time.time()
     
@@ -267,6 +285,11 @@ def scrape_pitchfork():
                                       'pub_dt',
                                       'reviewer',
                                       'genre'])
+    
+    
+    if write_path:
+        my_df.to_csv(write_path)
+    
     return my_df
 
 
@@ -337,50 +360,79 @@ search_dict = {'artist': search_art,
 
 #%% word bag search...
 
+
 # construct query slug without filters
 query_stripped = ' '.join([val for val in search_dict.values() if val])
 
-# search 
+def query_simple_join(search_art=None, search_track=None):
+    """simple search 
+    """
+    # assemble into query
+    search_dict = {'artist': search_art,
+                   'name': search_track}
+    
+    # join 
+    simple_search = ' '.join([val for val in search_dict.values() if val])
 
+    return simple_search
+
+
+
+# search 
+query_term = spot.search(q=query_stripped, type='track')
+
+
+def clean_test_result(item):
+    track_name = item['name']
+    artist_list = [art['name'] for art in item['artists']]
+    return [track_name, artist_list]
+
+
+test_results = [clean_test_result(item) for item in test_search['tracks']['items']]
 
 
 
 #%% trying to manually request
 
-# did f' all.  omitting field indicators seems more effective.
-# 
 
-search_list = []
+def aborted_manual_request_approach():
+    """struggled to get the spotify search working well.  thought it might be
+    an issue with spotipy encoding colons. tried to workaround by writing my
+    own requester. Learned some stuff. Didn't solve the problem.
+    """
+    # did f' all.  omitting field indicators seems more effective.
+    # 
+    
+    search_list = []
+    
+    for key, value in search_dict.items():
+        if value:
+            search_list.append(key + ':' + value)
+        query_raw = '+'.join(search_list)
+    
+    
+    
+    # construct query slug
+    query_raw = 'artist:' + search_art + ' name:' + search_track
+    query_clean = query_raw.replace(' ','+')
+    
+    
+    
+    # base api search endpoint
+    base_search_path = r'https://api.spotify.com/v1/search?q='
+    
+    
+    search_url = base_search_path + query_clean + '&type=' + search_type
+    
+    spot._auth_headers() # gives me headers for manual request process
 
-for key, value in search_dict.items():
-    if value:
-        search_list.append(key + ':' + value)
-    query_raw = '+'.join(search_list)
+    foo = requests.get(search_url,
+                       headers=spot._auth_headers())
+    
+    
+    print(foo.json())
 
 
-
-# construct query slug
-query_raw = 'artist:' + search_art + ' name:' + search_track
-query_clean = query_raw.replace(' ','+')
-
-# construct query slug without filters
-query_stripped = ' '.join([val for val in search_dict.values() if val])
-
-
-
-# base api search endpoint
-base_search_path = r'https://api.spotify.com/v1/search?q='
-
-
-search_url = base_search_path + query_clean + '&type=' + search_type
-
-
-foo = requests.get(search_url,
-                   headers=spot._auth_headers())
-
-
-print(foo.json())
 #%%
-spot._auth_headers()
 
 
