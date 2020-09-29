@@ -362,13 +362,13 @@ search_dict = {'artist': search_art,
 
 
 # construct query slug without filters
-query_stripped = ' '.join([val for val in search_dict.values() if val])
+# query_stripped = ' '.join([val for val in search_dict.values() if val])
 
-def query_simple_join(search_art=None, search_track=None):
+def query_simple_join(search_artist=None, search_track=None):
     """simple search 
     """
     # assemble into query
-    search_dict = {'artist': search_art,
+    search_dict = {'artist': search_artist,
                    'name': search_track}
     
     # join 
@@ -379,17 +379,55 @@ def query_simple_join(search_art=None, search_track=None):
 
 
 # search 
-query_term = spot.search(q=query_stripped, type='track')
-
-
+# query_term = spot.search(q=query_stripped, type='track')
+# query_term['tracks']['items']
+ 
 def clean_test_result(item):
     track_name = item['name']
     artist_list = [art['name'] for art in item['artists']]
-    return [track_name, artist_list]
+    uri = item['uri']
+    return [track_name, artist_list, uri]
 
 
-test_results = [clean_test_result(item) for item in test_search['tracks']['items']]
 
+def get_test_results(search_artist, search_track, query_plan, spot):
+    """
+    
+
+    Parameters
+    ----------
+    search_artist : str
+        artist name that we're searching for.
+    search_track : str
+        track title that we're searching for.
+    query_plan : function
+        function used to create the query.
+    spot : TYPE
+        spotify connection object.
+
+    Returns
+    -------
+    test_results : list
+        list of search results.
+
+    """
+        
+    # apply query-writer to write query
+    query_term = query_plan(search_artist=search_artist,
+                            search_track=search_track)
+    
+    # search on api for the track
+    test_search = spot.search(q=query_term, type='track')
+    
+    # extract results  to see if any match
+    test_results = [clean_test_result(item) for item in test_search['tracks']['items']]
+    
+    return test_results
+    
+
+
+# testing on a track
+get_test_results(search_artist='third eye blind', search_track='Jumper', query_plan=query_simple_join, spot=spot)
 
 
 #%% trying to manually request
